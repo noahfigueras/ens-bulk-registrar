@@ -35,9 +35,9 @@ contract BulkRegistrar {
 	function submitCommit(string[] calldata names, address owner, bytes32 secret) external {
 		IETHRegistrarController controller = getController();
 		for(uint i = 0; i < names.length; i++) {
-    	bytes32 commitment = controller.makeCommitment(names[i],owner,secret);
-      controller.commit(commitment);
-    }
+			bytes32 commitment = controller.makeCommitment(names[i],owner,secret);
+			controller.commit(commitment);
+		}
 	}
 
 	function registerAll(string[] calldata names, address owner, uint duration, bytes32 secret) external payable {
