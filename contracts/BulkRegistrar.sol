@@ -5,6 +5,8 @@ interface IETHRegistrarController {
 	function available(string memory name) external view returns(bool);
 	function register(string calldata name, address owner, uint duration, bytes32 secret) external payable;
 	function rentPrice(string memory name, uint duration) external view returns(uint);
+	function makeCommitment(string memory name, address owner, bytes32 secret) external pure returns(bytes32);
+	function commit(bytes32 commitment) external;
 }
 
 contract BulkRegistrar {
@@ -28,6 +30,14 @@ contract BulkRegistrar {
 		for(uint i = 0; i < names.length; i++) {
 				total += controller.rentPrice(names[i], duration);
 		}
+	}
+
+	function submitCommit(string[] calldata names, address owner, bytes32 secret) external {
+		IETHRegistrarController controller = getController();
+		for(uint i = 0; i < names.length; i++) {
+      bytes32 commitment = controller.makeCommitment(names[i],owner,secret);
+      controller.commit(commitment);
+    }
 	}
 
 	function registerAll(string[] calldata names, address owner, uint duration, bytes32 secret) external payable {
