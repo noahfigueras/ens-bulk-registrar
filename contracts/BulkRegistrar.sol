@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "hardhat/console.sol";
+
 interface IETHRegistrarController {
 	function available(string memory name) external view returns(bool);
 	function register(string calldata name, address owner, uint duration, bytes32 secret) external payable;
@@ -9,9 +12,10 @@ interface IETHRegistrarController {
 	function commit(bytes32 commitment) external;
 }
 
-contract BulkRegistrar {
+contract BulkRegistrar is Ownable {
 	address private ETHRegistrarControllerAddress;
-	
+	uint public FEE = 0.01 ether;
+
 	constructor(address _ETHRegistrarControllerAddress) {
 		ETHRegistrarControllerAddress = address(_ETHRegistrarControllerAddress);
 	}	
@@ -40,14 +44,19 @@ contract BulkRegistrar {
 		}
 	}
 
-	function registerAll(string[] calldata names, address owner, uint duration, bytes32 secret) external payable {
-		require(owner == msg.sender, "Error: Caller must be the same address as owner");
+	function registerAll(string[] calldata names, address _owner, uint duration, bytes32 secret) external payable {
+		require(_owner == msg.sender, "Error: Caller must be the same address as owner");
 		IETHRegistrarController controller = getController();	
 		for(uint i = 0; i < names.length; i++) {
 			uint cost = controller.rentPrice(names[i], duration);
-			controller.register{value:cost}(names[i], owner, duration, secret);
+			controller.register{value:cost}(names[i], _owner, duration, secret);
 		}
-		// Send any excess funds back
+		// Pay owner fee and Send any excess funds back
+		payable(owner()).transfer(FEE);
 		payable(msg.sender).transfer(address(this).balance);
 	}
+
+	function changeFee(uint _fee) external onlyOwner {
+		FEE = _fee;
+	}	
 }
