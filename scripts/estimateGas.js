@@ -34,7 +34,7 @@ async function main(args) {
 	let total;
 	let saved;
 	const Ether = ethers.utils.parseEther("1.0");
-	const number = 4;
+	const number = 10;
 	const duration = 31536000; // 1year in seconds
 	const domains = generateDomains(number);
 	const secret = ethers.utils.formatBytes32String("supersecretpassword");
@@ -65,7 +65,7 @@ async function main(args) {
 
 	// Calculate Percentages
 	const perc = calcPercentage(total, saved);		
-	console.log(`Percentage of gas saved is ${perc}`);
+	console.log("Percentage of gas saved is:", Number(perc), "%");
 }
 
 function generateDomains(num) {
