@@ -6,6 +6,9 @@ async function main() {
 		console.log("Error: Please run only on hardhat network with fork");
 		return 1;
 	}
+
+	// Utilities
+	const delay = ms => new Promise(res => setTimeout(res, ms));
 	
 	// Signers
 	const [owner, user] = await ethers.getSigners();
@@ -27,16 +30,30 @@ async function main() {
 	await contract.deployed();
 
 	// Set constants
+	const Ether = ethers.utils.parseEther("1.0");
 	const domains = ["noahfigueras", "batmansuper", "freaksworld", "lolomartinez"];
 	const secret = ethers.utils.formatBytes32String("supersecretpassword");
 
 	// Estimate gas for commit 
-	const commit = await mainnetContract.makeCommitment("lamadredeltopo", owner.address, secret);	
+	const commit = await mainnetContract.makeCommitment('noahfiguerasmartinez', owner.address, secret);	
 	const one = await mainnetContract.estimateGas.commit(commit);
 	const two = await contract.estimateGas.submitCommit(domains, owner.address, secret);
-	console.log("Gas Estimate for commit with original contract:", one);
-	console.log("Gas Estimate for 3 bulk commit with new contract:", two);
+	console.log("Gas Estimate for every single commit with original contract:", Number(one));
+	console.log("Gas Estimate for 4 bulk commit with new contract:", Number(two));
 
+	// Commit realistically for registering to work
+	await mainnetContract.commit(commit);
+	await contract.submitCommit(domains, owner.address, secret);
+	
+	// Wait some time for ens front-run prevention mechanism
+	await delay(65000);
+
+	// Estimage gas for registering domains
+	const duration = 31536000; // 1year in seconds
+	const first = await mainnetContract.estimateGas.register("noahfiguerasmartinez", owner.address, duration, secret, {value: Ether});
+	const second = await contract.estimateGas.registerAll(domains, owner.address, duration, secret, {value: Ether});
+	console.log("Gas Estimate for every single register with original contract:", Number(first));
+	console.log("Gas Estimate for registering 4 domains on bulk with new contract:", Number(second));
 }
 
 main()
