@@ -1,5 +1,6 @@
 import './App.css';
-import Navbar from './components/Navbar.js';
+import Navbar from './components/Navbar';
+import Main from './components/Main';
 import React, { useState } from 'react';
 
 function App() {
@@ -7,7 +8,7 @@ function App() {
 	return (
 		<div className="App">
 			<Navbar Provider={provider} setProvider={setProvider}/>
-		
+			<Main Provider={provider} />	
 		</div>
 	);
 }
