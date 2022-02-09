@@ -1,9 +1,9 @@
 import './components.css';
+import MyModal from './Modal';
 import { ethers } from 'ethers';
 import React, { useState, useEffect } from 'react';
 import InputGroup from 'react-bootstrap/InputGroup';
 import FormControl from 'react-bootstrap/FormControl';
-import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 
 const Main = ({Provider}) => {
@@ -15,11 +15,12 @@ const Main = ({Provider}) => {
 		signer = provider.getSigner();
 	}
 	
+	const [modalShow, setModalShow] = useState(false);
 	const [input, setInput] = useState("");
 	const [domains, setDomains] = useState([]);
 	const [duration, setDuration] = useState(1);
-	const [secret, setSecret] = useState(ethers.utils.formatBytes32String("supersecretpassword"));
 	const [rent, setRent] = useState("0.0");
+	const [phase, setPhase] = useState(0);
 
 	const contractAddress ='0xca8c8688914e0f7096c920146cd0ad85cd7ae8b9';
 	const ABI = [
@@ -50,15 +51,30 @@ const Main = ({Provider}) => {
 		setDomains(domains.filter((item) => item !== name));
 	}
 
+	const request = async (_secret) => {
+		// Close modal
+		setModalShow(false);
+		try{
+			const contract = _initContract();	
+			const addr = await signer.getAddress();
+			const secret = ethers.utils.formatBytes32String(_secret);
+			await contract.submitCommit(domains, addr, secret);
+			console.log("commit submited");
+			await _delay(65000); 
+		} catch(err) {
+			console.log(err);
+		}
+	}
+
 	const register = async () => {
 		try{
 			const contract = _initContract();	
 			const addr = await signer.getAddress();
 			console.log("beforeCommit");
-			await contract.submitCommit(domains, addr, secret);
+			//await contract.submitCommit(domains, addr, secret);
 			console.log("Submitted waiting 65 sec ...");
 			await _delay(65000); 
-			await contract.registerAll(domains, addr, duration, secret, {value: ethers.utils.parseEther("1.0")}); 
+			//await contract.registerAll(domains, addr, duration, secret, {value: ethers.utils.parseEther("1.0")}); 
 			console.log("Done registering");
 		} catch(err) {
 			console.log(err);
@@ -138,7 +154,11 @@ const Main = ({Provider}) => {
 			</div>
 		))}
 		</div>
-		<Button onClick={register} variant="primary">Register all</Button>
+		<Button onClick={() => setModalShow(true)} variant="primary">Request to Register</Button>
+		<MyModal
+			 show={modalShow}
+			 commit={request}
+		/>
 	</div>
 	);
 }
