@@ -1,7 +1,9 @@
+import './components.css';
 import { ethers } from 'ethers';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import InputGroup from 'react-bootstrap/InputGroup';
 import FormControl from 'react-bootstrap/FormControl';
+import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 
 const Main = ({Provider}) => {
@@ -14,9 +16,10 @@ const Main = ({Provider}) => {
 	}
 	
 	const [input, setInput] = useState("");
-	const [domains, addDomain] = useState([]);
-	const [duration, setDuration] = useState(31536000);
+	const [domains, setDomains] = useState([]);
+	const [duration, setDuration] = useState(1);
 	const [secret, setSecret] = useState(ethers.utils.formatBytes32String("supersecretpassword"));
+	const [rent, setRent] = useState("0.0");
 
 	const contractAddress ='0xca8c8688914e0f7096c920146cd0ad85cd7ae8b9';
 	const ABI = [
@@ -35,12 +38,17 @@ const Main = ({Provider}) => {
 				console.log("Domain is not available");
 				return;
 			} 
-			addDomain(oldD => [...oldD, domain]);	
-			
+			setDomains(oldD => [...oldD, domain]);	
+			setInput("");
 		} catch(err) {
 			console.log(err);
 		}		
 	};
+	
+	const deleteFromBatch = (e) => {
+		const name = e.target.name;
+		setDomains(domains.filter((item) => item !== name));
+	}
 
 	const register = async () => {
 		try{
@@ -57,6 +65,19 @@ const Main = ({Provider}) => {
 		}
 	}
 	
+	const calculateRent = async () => {
+		try{
+			const contract = _initContract();
+			const addr = await signer.getAddress();
+			const _duration = duration * 31536000; 
+			const _rent = await contract.rentPrice(domains, _duration); 
+			const rentFmt = ethers.utils.formatEther(_rent);
+			setRent(rentFmt.slice(0,6));	
+		} catch(err) {
+			console.log(err);
+		}
+	}
+
 	const _initContract = () => {
 		if(Provider === null){
 			throw 'Error: Provider is null, please connect to wallet.';
@@ -66,28 +87,59 @@ const Main = ({Provider}) => {
 	}
 
 	const _delay = ms => new Promise(res => setTimeout(res, ms));
+	
+	const increaseYear = () => {
+		setDuration(duration + 1);
+	}
+
+	const decreaseYear = () => {
+		if(duration === 1) {
+			return;
+		}
+		setDuration(duration - 1);
+	}
+
+	useEffect(() => {
+		calculateRent();	
+	}, [duration, domains]);
 
 	return (
-		<div className="App-header">
-			<InputGroup style={{padding: "20px", maxWidth: "600px"}} className="mb-3">
+	<div className="App-header">
+		<h2>Save Gas registering your domains in bulk</h2>
+		<div id="container-input">
+			<InputGroup className="mb-3">
 				<FormControl
-					placeholder="yourdomain"
-					aria-label="Opensea Url"
-					aria-describedby="basic-addon2"
-					value={input}
-					onChange={e => setInput(e.target.value)}
+				placeholder="yourdomain"
+				aria-label="add-domain"
+				aria-describedby="basic-addon2"
+				value={input}
+				onChange={e => setInput(e.target.value)}
 				/>
 				<Button onClick={addToBatch} variant="outline-secondary" id="button-addon2">
-					Add domain
+				Add domain
 				</Button>
-      		</InputGroup>
-			<div id="domains-box">
-				{domains.map((domain,id) => (
-					<p key={id}>{id+1}. {domain}</p>	
-				))}
+			</InputGroup>
+			
+			<div id="secondary-input">
+				<InputGroup className="mb-3" style={{ maxWidth: "140px"}} >
+					<Button onClick={decreaseYear} variant="outline-secondary">-</Button>
+					<FormControl value={duration + " year"} />
+					<Button onClick={increaseYear} variant="outline-secondary">+</Button>
+				</InputGroup>
+				<p>{rent} ETH Registration</p>
 			</div>
-			<Button onClick={register} variant="primary">Register all</Button>
 		</div>
+
+		<div id="domains-box">
+		{domains.map((domain,id) => (
+			<div key={id} className="single-domain">
+				<p><span>{id+1}.</span> {domain}</p>	
+				<Button onClick={deleteFromBatch} name={domain} className="domain-remove" variant="danger">X</Button>
+			</div>
+		))}
+		</div>
+		<Button onClick={register} variant="primary">Register all</Button>
+	</div>
 	);
 }
 

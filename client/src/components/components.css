@@ -1,0 +1,33 @@
+#container-input{
+	margin: 20px 0;
+	max-width: 800px;
+}
+
+#secondary-input{
+	display: flex;
+}
+
+#secondary-input p{
+	margin-left: auto;
+	padding-left: 20px;
+}
+
+.single-domain{
+	display: flex;
+	align-items: center;
+}
+
+.single-domain p{
+	margin: 0;
+	padding: 10px 40px;
+}
+
+.domain-remove{
+	margin-left: auto;
+}
+
+#domains-box{
+	margin-bottom: 40px;
+}
+
+
