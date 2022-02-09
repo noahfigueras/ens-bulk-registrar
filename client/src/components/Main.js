@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import InputGroup from 'react-bootstrap/InputGroup';
 import FormControl from 'react-bootstrap/FormControl';
 import Button from 'react-bootstrap/Button';
+import Spinner from 'react-bootstrap/Spinner';
 
 const Main = ({Provider}) => {
 	let provider;
@@ -21,6 +22,7 @@ const Main = ({Provider}) => {
 	const [duration, setDuration] = useState(1);
 	const [rent, setRent] = useState("0.0");
 	const [phase, setPhase] = useState(0);
+	const [pass, setPass] = useState("");
 
 	const contractAddress ='0xca8c8688914e0f7096c920146cd0ad85cd7ae8b9';
 	const ABI = [
@@ -31,6 +33,9 @@ const Main = ({Provider}) => {
 	];
 
 	const addToBatch = async () => {
+		if(phase === 1){
+			return;
+		}
 		try{
 			const domain = input;
 			const contract = _initContract(); 
@@ -47,6 +52,9 @@ const Main = ({Provider}) => {
 	};
 	
 	const deleteFromBatch = (e) => {
+		if(phase === 1){
+			return;
+		}	
 		const name = e.target.name;
 		setDomains(domains.filter((item) => item !== name));
 	}
@@ -59,8 +67,10 @@ const Main = ({Provider}) => {
 			const addr = await signer.getAddress();
 			const secret = ethers.utils.formatBytes32String(_secret);
 			await contract.submitCommit(domains, addr, secret);
-			console.log("commit submited");
+			setPhase(1);
 			await _delay(65000); 
+			setPass(secret);
+			setPhase(2);
 		} catch(err) {
 			console.log(err);
 		}
@@ -70,11 +80,8 @@ const Main = ({Provider}) => {
 		try{
 			const contract = _initContract();	
 			const addr = await signer.getAddress();
-			console.log("beforeCommit");
-			//await contract.submitCommit(domains, addr, secret);
-			console.log("Submitted waiting 65 sec ...");
-			await _delay(65000); 
-			//await contract.registerAll(domains, addr, duration, secret, {value: ethers.utils.parseEther("1.0")}); 
+			const _duration = _getDuration(); 
+			await contract.registerAll(domains, addr, _duration, pass, {value: ethers.utils.parseEther("1.0")}); 
 			console.log("Done registering");
 		} catch(err) {
 			console.log(err);
@@ -84,14 +91,17 @@ const Main = ({Provider}) => {
 	const calculateRent = async () => {
 		try{
 			const contract = _initContract();
-			const addr = await signer.getAddress();
-			const _duration = duration * 31536000; 
+			const _duration = _getDuration(); 
 			const _rent = await contract.rentPrice(domains, _duration); 
 			const rentFmt = ethers.utils.formatEther(_rent);
 			setRent(rentFmt.slice(0,6));	
 		} catch(err) {
 			console.log(err);
 		}
+	}
+
+	const _getDuration = () => {
+		return duration * 31536000
 	}
 
 	const _initContract = () => {
@@ -154,10 +164,23 @@ const Main = ({Provider}) => {
 			</div>
 		))}
 		</div>
+
+		{ phase === 0 && 
 		<Button onClick={() => setModalShow(true)} variant="primary">Request to Register</Button>
+		}
+		{ phase === 1 && 
+		<div>
+			<Spinner animation="border" variant="primary" />		
+			<p>Waiting for commit to be confirmed by registrar...</p>
+		</div>
+		}
+		{ phase === 2 && 
+		<Button onClick={register} variant="primary">Register all domains</Button>
+		}
 		<MyModal
 			 show={modalShow}
 			 commit={request}
+			 onHide={() => setModalShow(false)}
 		/>
 	</div>
 	);
