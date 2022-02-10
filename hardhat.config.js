@@ -36,23 +36,10 @@ module.exports = {
                 url: process.env.ALCHEMY_URL_MAINNET
             }
         },
-        rinkeby: {
-            url: process.env.ALCHEMY_URL_RINKEBY,
-            accounts: [process.env.PRIVATE_KEY_1, process.env.PRIVATE_KEY_2],
-            gas: 'auto'
-        },
-        polygon: {
-            url: process.env.ALCHEMY_URL_POLYGON_MAINNET, 
-            accounts: [process.env.PRIVATE_KEY_1]
-        },
-        mumbai: {
-            url: process.env.ALCHEMY_URL_POLYGON_MUMBAI, 
-            accounts: [process.env.PRIVATE_KEY_1, process.env.PRIVATE_KEY_2]
-        },
-         mainnet: {
-            url: process.env.ALCHEMY_URL_MAINNET,
-            accounts: [process.env.PRIVATE_KEY_1]
-         }
+		 mainnet: {
+			url: process.env.ALCHEMY_URL_MAINNET,
+			accounts: [process.env.PRIVATE_KEY_1]
+		 }
      },
      etherscan: {
         // Your API key for Etherscan
