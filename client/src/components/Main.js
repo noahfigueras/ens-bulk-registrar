@@ -29,7 +29,8 @@ const Main = ({Provider}) => {
 		"function available (string memory name) external view returns(bool)",
 		"function rentPrice(string[] calldata names, uint duration) external view returns(uint total)",
 		"function submitCommit(string[] calldata names, address owner, bytes32 secret) external",
-		"function registerAll(string[] calldata names, address _owner, uint duration, bytes32 secret) external payable"
+		"function registerAll(string[] calldata names, address _owner, uint duration, bytes32 secret) external payable",
+		"function FEE() external view returns(uint)"
 	];
 
 	const addToBatch = async () => {
@@ -81,7 +82,10 @@ const Main = ({Provider}) => {
 			const contract = _initContract();	
 			const addr = await signer.getAddress();
 			const _duration = _getDuration(); 
-			await contract.registerAll(domains, addr, _duration, pass, {value: ethers.utils.parseEther("1.0")}); 
+			const _rent = await contract.rentPrice(domains, _duration); 
+			const fee = await contract.FEE();
+			const _value = _rent.add(fee);
+			await contract.registerAll(domains, addr, _duration, pass, {value: _value}); 
 			console.log("Done registering");
 		} catch(err) {
 			console.log(err);
