@@ -50,14 +50,15 @@ describe("Registering ens domains in bulk", function() {
 	});
 
 	it("Registers domains in bulk", async function() {
-		const domains = ["noahfigueras", "batmansuper", "freaksworld"];
+		const domains = ["noahfigueras", "batmansuper", "freaksworld", "noahfigueroa0", "noahfigueroa1", "noahfigueroa"];
 		const secret = ethers.utils.formatBytes32String("supersecretpassword");
 		await contract.submitCommit(domains, owner.address, secret);
 
 		// Protocol has to wait to verify commit to prevent front run
 		await delay(65000); 
 		// Register bulk
-		await contract.registerAll(domains, owner.address , duration, secret, {value: Ether});
+		const estimate = await contract.estimateGas.registerAll(domains, owner.address, duration, secret, {value: Ether});
+		await contract.registerAll(domains, owner.address , duration, secret, {value: Ether, gasLimit: estimate});
 		// Check
 		const noahFigueras = await contract.available("noahfigueras");	
 		const freaksWorld = await contract.available("freaksworld");	
@@ -67,10 +68,11 @@ describe("Registering ens domains in bulk", function() {
 		expect(batmanSuper).to.equal(false);
 	});
 
-	it("Transfers fee to owner of contract", async function() {
+	it("Transfers fee to owner of contract with flat fee option", async function() {
 		const domains = ["lokoPerez", "batmansuper2", "freaksworld2"];
 		const secret = ethers.utils.formatBytes32String("supersecretpassword");
 		await contract.connect(user).submitCommit(domains, user.address, secret);
+		await contract.changeFeeStyle(true);
 
 		// Protocol has to wait to verify commit to prevent front run
 		await delay(65000); 
@@ -96,5 +98,10 @@ describe("Registering ens domains in bulk", function() {
 	it("Enables owner to change FEE param", async function() {
 		await contract.changeFee(Ether);
 		expect(await contract.FEE()).to.equal(Ether);
+	});
+
+	it("Enables owner to change percentage_Fee param", async function() {
+		await contract.setPercentageGas(10);
+		expect(await contract.perc_gasFee()).to.equal(10);
 	});
 });
