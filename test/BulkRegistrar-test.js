@@ -85,6 +85,35 @@ describe("Registering ens domains in bulk", function() {
 		expect(String(afterBalance)).to.equal(String(resultBalance));
 	});
 
+	it("Transfers fee to owner of contract with percentage fee option", async function() {
+		const domains = ["lokoPerez10", "batmansuper20", "freaksworld20", "noahfigueras10"];
+		const secret = ethers.utils.formatBytes32String("supersecretpassword");
+		await contract.connect(user).submitCommit(domains, user.address, secret);
+		await contract.changeFeeStyle(false);
+
+		// Protocol has to wait to verify commit to prevent front run
+		await delay(65000); 
+		// Register bulk
+		const estimate_gas = await contract.connect(user).estimateGas.registerAll(domains, user.address , duration, secret, {value: Ether});
+		const beforeBalance = await owner.getBalance();
+		const tx = await contract.connect(user).registerAll(domains, user.address , duration, secret, {value: Ether, gasLimit: estimate_gas});
+		const afterBalance = await owner.getBalance();
+
+		const gasFees = estimate_gas.mul(tx.gasPrice);
+		const perc = await contract.perc_gasFee();
+		const returned = gasFees.mul(perc).div(ethers.BigNumber.from('100'));
+		const diff = afterBalance.sub(beforeBalance);
+
+		// check if result has a margin of max 70000 gwei
+		let revert = false;
+		const max = ethers.utils.parseUnits("70000.0", "gwei");
+		if(returned.sub(diff) > max) {
+			revert = true;
+		}
+		expect(revert).to.equal(false);
+	});
+
+
 	it("Reverts when not owner tries to change FEE param", async function() {
 		let revert = false;
 		try{
