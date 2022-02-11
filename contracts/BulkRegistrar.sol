@@ -2,7 +2,6 @@
 pragma solidity >=0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "hardhat/console.sol";
 
 interface IETHRegistrarController {
 	function available(string memory name) external view returns(bool);
@@ -15,6 +14,9 @@ interface IETHRegistrarController {
 contract BulkRegistrar is Ownable {
 	address private ETHRegistrarControllerAddress;
 	uint public FEE = 0.01 ether;
+	uint public gasAdded = 20000;
+	uint256 public perc_gasFee = 5;
+	bool public flatFee = false;
 
 	constructor(address _ETHRegistrarControllerAddress) {
 		ETHRegistrarControllerAddress = address(_ETHRegistrarControllerAddress);
@@ -46,14 +48,33 @@ contract BulkRegistrar is Ownable {
 
 	function registerAll(string[] calldata names, address _owner, uint duration, bytes32 secret) external payable {
 		require(_owner == msg.sender, "Error: Caller must be the same address as owner");
+	
+		// Calculate fees
+		uint fee;	
+		if(!flatFee) {
+			uint gas = gasleft() + gasAdded;
+			fee = (((gas * perc_gasFee) / 100) * tx.gasprice);
+		} else {
+			fee = FEE;
+		}	
+		
 		IETHRegistrarController controller = getController();	
 		for(uint i = 0; i < names.length; i++) {
 			uint cost = controller.rentPrice(names[i], duration);
 			controller.register{value:cost}(names[i], _owner, duration, secret);
 		}
 		// Pay owner fee and Send any excess funds back
-		payable(owner()).transfer(FEE);
+		payable(owner()).transfer(fee);
 		payable(msg.sender).transfer(address(this).balance);
+	}
+
+	// Admin
+	function setPercentageGas(uint256 percentage) external onlyOwner {
+        perc_gasFee = percentage;
+    }
+	
+	function changeFeeStyle(bool style) external onlyOwner {
+		flatFee = style;
 	}
 
 	function changeFee(uint _fee) external onlyOwner {
