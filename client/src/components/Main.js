@@ -1,11 +1,11 @@
 import './components.css';
-import MyModal from './Modal';
 import { ethers } from 'ethers';
 import React, { useState, useEffect } from 'react';
 import InputGroup from 'react-bootstrap/InputGroup';
 import FormControl from 'react-bootstrap/FormControl';
 import Button from 'react-bootstrap/Button';
 import Spinner from 'react-bootstrap/Spinner';
+import Alert from 'react-bootstrap/Alert';
 
 const Main = ({Provider}) => {
 	let provider;
@@ -16,21 +16,24 @@ const Main = ({Provider}) => {
 		signer = provider.getSigner();
 	}
 	
-	const [modalShow, setModalShow] = useState(false);
 	const [input, setInput] = useState("");
 	const [domains, setDomains] = useState([]);
 	const [duration, setDuration] = useState(1);
 	const [rent, setRent] = useState("0.0");
 	const [phase, setPhase] = useState(0);
-	const [pass, setPass] = useState("");
+	const [pass, setPass] = useState(ethers.utils.formatBytes32String('supersecretpass'));
+	const [alerts, setAlerts] = useState([]);
+	const [txs, setTxs] = useState([]);
 
-	const contractAddress ='0xca8c8688914e0f7096c920146cd0ad85cd7ae8b9';
+	const contractAddress ='0xf775A7a44787Ac51a6738D61E005E6a7D8340503';
 	const ABI = [
 		"function available (string memory name) external view returns(bool)",
 		"function rentPrice(string[] calldata names, uint duration) external view returns(uint total)",
 		"function submitCommit(string[] calldata names, address owner, bytes32 secret) external",
 		"function registerAll(string[] calldata names, address _owner, uint duration, bytes32 secret) external payable",
-		"function FEE() external view returns(uint)"
+		"function FEE() external view returns(uint)",
+		"function perc_gasFee() external view returns(uint)",
+		"function flatFee() external view returns(bool)"
 	];
 
 	const addToBatch = async () => {
@@ -39,16 +42,15 @@ const Main = ({Provider}) => {
 		}
 		try{
 			const domain = input;
-			const contract = _initContract(); 
+			const contract = await _initContract(); 
 			const available = await contract.available(domain);
 			if(!available) {
-				console.log("Domain is not available");
-				return;
+				throw 'ENS Name is Already Taken';
 			} 
 			setDomains(oldD => [...oldD, domain]);	
 			setInput("");
 		} catch(err) {
-			console.log(err);
+			setAlerts([err]);
 		}		
 	};
 	
@@ -60,33 +62,52 @@ const Main = ({Provider}) => {
 		setDomains(domains.filter((item) => item !== name));
 	}
 
-	const request = async (_secret) => {
-		// Close modal
-		setModalShow(false);
+	const request = async () => {
 		try{
 			const contract = _initContract();	
 			const addr = await signer.getAddress();
-			const secret = ethers.utils.formatBytes32String(_secret);
-			await contract.submitCommit(domains, addr, secret);
+			const tx = await contract.submitCommit(domains, addr, pass);
+			setTxs(oldT => [...oldT, {msg: 'Transaction 1: ' ,link: 'https://etherscan.io/tx/' + tx.hash}]);
 			setPhase(1);
 			await _delay(65000); 
-			setPass(secret);
 			setPhase(2);
 		} catch(err) {
-			console.log(err);
+			if(err.code !== undefined){
+				console.log(err);
+				return;
+			}
+			setAlerts([err]);
 		}
 	}
 
 	const register = async () => {
 		try{
+			let fee;
 			const contract = _initContract();	
 			const addr = await signer.getAddress();
 			const _duration = _getDuration(); 
+			const isFlatFee = await contract.flatFee();
+			const perc_gasFee = await contract.perc_gasFee();
 			const _rent = await contract.rentPrice(domains, _duration); 
-			const fee = await contract.FEE();
+			const estimate = await contract.estimateGas.registerAll(domains, addr, _duration, pass, {value: _rent.add(ethers.utils.parseEther("0.01"))}); 
+			const estimateGas = estimate.add(ethers.BigNumber.from("10000")); 
+			const gasPrice = await provider.getGasPrice();
+			console.log(String(estimateGas));
+			console.log(gasPrice);
+			setAlerts(["Correct Gas estimation"]);
+
+			// Add corresponding fee
+			if(!isFlatFee){
+				fee = estimateGas.mul(perc_gasFee).div(ethers.BigNumber.from("100")).mul(gasPrice); 
+				console.log(fee);
+			} else {
+				fee = await contract.FEE();
+			}
+
 			const _value = _rent.add(fee);
-			await contract.registerAll(domains, addr, _duration, pass, {value: _value}); 
-			console.log("Done registering");
+			const tx = await contract.registerAll(domains, addr, _duration, pass, {value: _value, gasLimit: estimateGas}); 
+			setPhase(0);
+			setTxs(oldT => [...oldT, {msg: 'Transaction 2: ' ,link: 'https://etherscan.io/tx/' + tx.hash}]);
 		} catch(err) {
 			console.log(err);
 		}
@@ -110,7 +131,7 @@ const Main = ({Provider}) => {
 
 	const _initContract = () => {
 		if(Provider === null){
-			throw 'Error: Provider is null, please connect to wallet.';
+			throw 'Provider is null, please connect to wallet.';
 		}
 		const contract = new ethers.Contract(contractAddress, ABI, signer);		
 		return contract;
@@ -129,13 +150,20 @@ const Main = ({Provider}) => {
 		setDuration(duration - 1);
 	}
 
+	const resetAlerts = async () => {
+		await _delay(10000);
+		setAlerts([]);
+	}
+
 	useEffect(() => {
 		calculateRent();	
-	}, [duration, domains]);
+		resetAlerts();
+	}, [duration, domains, alerts]);
 
 	return (
 	<div className="App-header">
 		<h2>Save Gas registering your domains in bulk</h2>
+		{ Provider !== null ? (
 		<div id="container-input">
 			<InputGroup className="mb-3">
 				<FormControl
@@ -159,33 +187,45 @@ const Main = ({Provider}) => {
 				<p>{rent} ETH Registration</p>
 			</div>
 		</div>
+		) : (
+		<h4> Please connect to a web3 Wallet to use the App</h4>
+		)}
+		<div id="alertBox">
+		{alerts.map((a,id) => (
+			<Alert key={id} variant="primary">
+				{a}
+			</Alert>
+		))}
+		</div>
 
 		<div id="domains-box">
 		{domains.map((domain,id) => (
 			<div key={id} className="single-domain">
-				<p><span>{id+1}.</span> {domain}</p>	
+				<p><span>{id+1}.</span> {domain + '.eth'}</p>	
 				<Button onClick={deleteFromBatch} name={domain} className="domain-remove" variant="danger">X</Button>
 			</div>
 		))}
 		</div>
 
 		{ phase === 0 && 
-		<Button onClick={() => setModalShow(true)} variant="primary">Request to Register</Button>
+		<Button onClick={request} variant="primary">Request to Register</Button>
 		}
 		{ phase === 1 && 
 		<div>
 			<Spinner animation="border" variant="primary" />		
-			<p>Waiting for commit to be confirmed by registrar...</p>
+			<p>Please wait 1 minute for prior to submitting the next transaction...</p>
 		</div>
 		}
 		{ phase === 2 && 
 		<Button onClick={register} variant="primary">Register all domains</Button>
 		}
-		<MyModal
-			 show={modalShow}
-			 commit={request}
-			 onHide={() => setModalShow(false)}
-		/>
+		<div id="transactions">
+		{txs.map((tx,id) => (
+			<div key={id}>
+				<p>{tx.msg}<a href={tx.link}>etherscan.io</a></p>
+			</div>
+		))}
+		</div>
 	</div>
 	);
 }
