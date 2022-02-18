@@ -17,7 +17,10 @@ task("etherscan", "Verifies code on etherscan")
     .setAction(
         async (taskArgs, hre) => {
             await hre.run("verify:verify", {
-                  address: taskArgs.address,
+				address: taskArgs.address,
+				constructorArguments: [
+					'0x283Af0B28c62C092C9727F1Ee09c02CA627EB7F5'
+				],
             });
 });
 
@@ -33,7 +36,7 @@ module.exports = {
      networks: {
          hardhat: {
             forking : {
-                url: process.env.ALCHEMY_URL_MAINNET
+                url: process.env.ALCHEMY_URL_MAINNET,
             }
         },
 		 mainnet: {
