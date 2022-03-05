@@ -4,11 +4,9 @@ async function main() {
 	// Get Deployer account
 	const [deployer] = await ethers.getSigners();
 
-	const ETHRegistrarControllerAddress = '0x283Af0B28c62C092C9727F1Ee09c02CA627EB7F5'; // Mainnet
-	
 	// Deploying main Contract
 	const Contract = await ethers.getContractFactory("BulkRegistrar");
-	const contract = await Contract.deploy(ETHRegistrarControllerAddress);
+	const contract = await Contract.deploy();
 	await contract.deployed();
 
 	console.log("Smart contract deployed with address:", contract.address);
