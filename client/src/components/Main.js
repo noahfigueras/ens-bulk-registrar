@@ -1,6 +1,5 @@
-import './components.css';
-import { ethers } from 'ethers';
-import React, { useState, useEffect } from 'react';
+import './components.css'; 
+import { ethers } from 'ethers'; import React, { useState, useEffect } from 'react';
 import InputGroup from 'react-bootstrap/InputGroup';
 import FormControl from 'react-bootstrap/FormControl';
 import Button from 'react-bootstrap/Button';
@@ -21,16 +20,18 @@ const Main = ({Provider}) => {
 	const [duration, setDuration] = useState(1);
 	const [rent, setRent] = useState("0.0");
 	const [phase, setPhase] = useState(0);
-	const [pass, setPass] = useState(ethers.utils.formatBytes32String('supersecretpass'));
+	const [pass, setPass] = useState();
 	const [alerts, setAlerts] = useState([]);
 	const [txs, setTxs] = useState([]);
 
-	const contractAddress ='0xf775A7a44787Ac51a6738D61E005E6a7D8340503';
+	//const contractAddress ='0xf775A7a44787Ac51a6738D61E005E6a7D8340503'; // MAINNET
+	const contractAddress ='0xc4364903FC6212D4054BBdA1a27a47a068EDC46c'; // ROPSTEN 
+	const resolver = '0xDaaF96c344f63131acadD0Ea35170E7892d3dfBA'; // ROPSTEN
 	const ABI = [
 		"function available (string memory name) external view returns(bool)",
 		"function rentPrice(string[] calldata names, uint duration) external view returns(uint total)",
-		"function submitCommit(string[] calldata names, address owner, bytes32 secret) external",
-		"function registerAll(string[] calldata names, address _owner, uint duration, bytes32 secret) external payable",
+		"function submitCommit(string[] calldata names, address owner, bytes32 secret, address resolver, address addr) external",
+		"function registerAll(string[] calldata names, address _owner, uint duration, bytes32 secret, address resolver, address addr) external payable",
 		"function FEE() external view returns(uint)",
 		"function perc_gasFee() external view returns(uint)",
 		"function flatFee() external view returns(bool)"
@@ -66,7 +67,12 @@ const Main = ({Provider}) => {
 		try{
 			const contract = _initContract();	
 			const addr = await signer.getAddress();
-			const tx = await contract.submitCommit(domains, addr, pass);
+			// Setting unique password
+			const hash = await signer.signMessage("Setting password for recovery");
+			const secret = hash.slice(0,66);
+			setPass(secret);
+
+			const tx = await contract.submitCommit(domains, addr, secret, resolver, addr);
 			setTxs(oldT => [...oldT, {msg: 'Transaction 1: ' ,link: 'https://etherscan.io/tx/' + tx.hash}]);
 			setPhase(1);
 			await _delay(65000); 
@@ -89,12 +95,9 @@ const Main = ({Provider}) => {
 			const isFlatFee = await contract.flatFee();
 			const perc_gasFee = await contract.perc_gasFee();
 			const _rent = await contract.rentPrice(domains, _duration); 
-			const estimate = await contract.estimateGas.registerAll(domains, addr, _duration, pass, {value: _rent.add(ethers.utils.parseEther("0.01"))}); 
+			const estimate = await contract.estimateGas.registerAll(domains, addr, _duration, pass, resolver, addr, {value: _rent.add(ethers.utils.parseEther("0.01"))}); 
 			const estimateGas = estimate.add(ethers.BigNumber.from("10000")); 
 			const gasPrice = await provider.getGasPrice();
-			console.log(String(estimateGas));
-			console.log(gasPrice);
-			setAlerts(["Correct Gas estimation"]);
 
 			// Add corresponding fee
 			if(!isFlatFee){
@@ -105,7 +108,7 @@ const Main = ({Provider}) => {
 			}
 
 			const _value = _rent.add(fee);
-			const tx = await contract.registerAll(domains, addr, _duration, pass, {value: _value, gasLimit: estimateGas}); 
+			const tx = await contract.registerAll(domains, addr, _duration, pass, resolver, addr, {value: _value, gasLimit: estimateGas}); 
 			setPhase(0);
 			setTxs(oldT => [...oldT, {msg: 'Transaction 2: ' ,link: 'https://etherscan.io/tx/' + tx.hash}]);
 		} catch(err) {
