@@ -42,6 +42,10 @@ module.exports = {
 		 mainnet: {
 			url: process.env.ALCHEMY_URL_MAINNET,
 			accounts: [process.env.PRIVATE_KEY_1]
+		 },
+		 ropsten: {
+			url: process.env.ALCHEMY_URL_ROPSTEN,
+			accounts: [process.env.PRIVATE_KEY_1]
 		 }
      },
      etherscan: {
