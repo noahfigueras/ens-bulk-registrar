@@ -38,6 +38,33 @@
 	font-size: 0.8em;
 }
 
+#register-info{
+	display: flex;
+	margin: 20px;
+}
+
+.register-block{
+	display: flex;
+}
+
+.number {
+	margin-right: 20px;
+}
+
+.number p {
+	border: 1px solid white;
+	height:50px;
+    border-radius:50%;
+    -moz-border-radius:50%;
+    -webkit-border-radius:50%;
+    width:50px;
+}
+.register-description{
+	max-width: 25em;
+	text-align: left;
+	font-size: 0.8em;
+}
+
 .footer{
   width: 100%;
   padding: 20px;

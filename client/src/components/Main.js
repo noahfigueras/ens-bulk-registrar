@@ -252,6 +252,37 @@ const Main = ({Provider}) => {
 			</div>
 		))}
 		</div>
+
+		<div id="register-info">
+			<div className="register-block">
+				<div className="number">
+					<p>1</p>
+				</div>
+				<div className="register-description">
+					<p><b>Request to Register</b></p>
+					<p>Your wallet will open and you will be asked to confirm the first of two transactions required for registration. If the second transaction is not processed within 7 days of the first, you will need to start again from step 1.</p>
+				</div>
+			</div>
+			<div className="register-block">
+				<div className="number">
+					<p>2</p>
+				</div>
+				<div className="register-description">
+					<p><b>Wait for 1 minute</b></p>
+					<p>The waiting period is required to ensure another person hasn’t tried to register the same name and protect you after your request.</p>
+				</div>
+			</div>
+			<div className="register-block">
+				<div className="number">
+					<p>3</p>
+				</div>
+				<div className="register-description">
+					<p><b>Complete Registration</b></p>
+					<p>Click ‘register’ and your wallet will re-open. Only after the 2nd transaction is confirmed you'll know if you got the name.</p>
+				</div>
+			</div>
+		</div>
+
 	</div>
 	);
 }
