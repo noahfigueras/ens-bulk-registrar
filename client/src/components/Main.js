@@ -136,6 +136,7 @@ const Main = ({Provider}) => {
 	const FinalTransaction = () => {
 		return (
 		<div>
+			<hr/>
 			<p>Please go to <a href={`https://app.ens.domains/address/${Addr}`}>ens</a> to control them</p>
 			<p>or View on OpenSea <a href={`https://opensea.io/assets/${Addr}`}>here</a></p>
 		</div>
