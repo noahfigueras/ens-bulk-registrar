@@ -34,3 +34,14 @@
 	margin: 40px;
 }
 
+.info {
+	font-size: 0.8em;
+}
+
+.footer{
+  width: 100%;
+  padding: 20px;
+  background-color: #212529;
+  color: white;
+  text-align: center;
+}

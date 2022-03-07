@@ -135,7 +135,7 @@ const Main = ({Provider}) => {
 
 	const _initContract = () => {
 		if(Provider === null){
-			throw 'Provider is null, please connect to wallet.';
+			throw 'Please connect to your MetaMask or WalletConnect Wallet.';
 		}
 		const contract = new ethers.Contract(contractAddress, ABI, signer);		
 		return contract;
@@ -167,7 +167,28 @@ const Main = ({Provider}) => {
 	return (
 	<div className="App-header">
 		<img src={logo} className="App-logo" alt="logo" />
-		<h2>Save Gas registering your domains in bulk</h2>
+		<div className="info">
+			<p>
+				By registering your ENS names together, you can save gas by minimizing
+				transactions. 
+			</p>
+			<p>
+				Using this service you save an estimated 2-25% on your 
+				gas fee. 
+			</p>
+			<p>
+				We take 5% of the savings and pass along the rest of the 
+				savings to you!
+			</p>
+			<a href="https://etherscan.io/address/0xf775a7a44787ac51a6738d61e005e6a7d8340503"> 
+				View Contract 
+			</a>
+			<p>Contact us directly on Twitter 
+			<a href=" https://twitter.com/ENSBulk">
+				@ENSBulk
+			</a>
+			</p>
+		</div>
 		{ Provider !== null ? (
 		<div id="container-input">
 			<InputGroup className="mb-3">
