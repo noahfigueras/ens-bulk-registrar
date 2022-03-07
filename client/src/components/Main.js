@@ -16,6 +16,7 @@ const Main = ({Provider}) => {
 		signer = provider.getSigner();
 	}
 	
+	const [Addr, setAddr] = useState("");
 	const [input, setInput] = useState("");
 	const [domains, setDomains] = useState([]);
 	const [duration, setDuration] = useState(1);
@@ -24,6 +25,8 @@ const Main = ({Provider}) => {
 	const [pass, setPass] = useState();
 	const [alerts, setAlerts] = useState([]);
 	const [txs, setTxs] = useState([]);
+	const [txTrigger, setTxTrigger] = useState(false);
+	const [finalTransaction, setFinalTransaction] = useState(false);
 
 	//const contractAddress ='0xf775A7a44787Ac51a6738D61E005E6a7D8340503'; // MAINNET
 	const contractAddress ='0xc4364903FC6212D4054BBdA1a27a47a068EDC46c'; // ROPSTEN 
@@ -64,18 +67,25 @@ const Main = ({Provider}) => {
 		setDomains(domains.filter((item) => item !== name));
 	}
 
+
 	const request = async () => {
 		try{
 			const contract = _initContract();	
 			const addr = await signer.getAddress();
+			setAddr(addr);
 			// Setting unique password
 			const hash = await signer.signMessage("Setting password for recovery");
 			const secret = hash.slice(0,66);
 			setPass(secret);
-
+			// Submit request transaction
 			const tx = await contract.submitCommit(domains, addr, secret, resolver, addr);
-			setTxs(oldT => [...oldT, {msg: 'Transaction 1: ' ,link: 'https://etherscan.io/tx/' + tx.hash}]);
+			setTxs(oldT => [...oldT, { id: 1, state: 'pending... ' ,link: 'https://etherscan.io/tx/' + tx.hash}]);
 			setPhase(1);
+			// Wait for confirmation
+			await tx.wait();
+			// Update tx state
+			setTxTrigger([true, 1]);
+			// Wait 1min before register
 			await _delay(65000); 
 			setPhase(2);
 		} catch(err) {
@@ -110,11 +120,26 @@ const Main = ({Provider}) => {
 
 			const _value = _rent.add(fee);
 			const tx = await contract.registerAll(domains, addr, _duration, pass, resolver, addr, {value: _value, gasLimit: estimateGas}); 
+			setTxs(oldT => [...oldT, {id: 2, state: 'pending... ' ,link: 'https://etherscan.io/tx/' + tx.hash}]);
+			// Wait for confirmation 
+			await tx.wait();
+			// Update tx state
+			setTxTrigger([true, 2]);
+			// Build final Transaction
+			setFinalTransaction(true);
 			setPhase(0);
-			setTxs(oldT => [...oldT, {msg: 'Transaction 2: ' ,link: 'https://etherscan.io/tx/' + tx.hash}]);
 		} catch(err) {
 			console.log(err);
 		}
+	}
+	
+	const FinalTransaction = () => {
+		return (
+		<div>
+			<p>Please go to <a href={`https://app.ens.domains/address/${Addr}`}>ens</a> to control them</p>
+			<p>or View on OpenSea <a href={`https://opensea.io/assets/${Addr}`}>here</a></p>
+		</div>
+		);
 	}
 	
 	const calculateRent = async () => {
@@ -159,10 +184,26 @@ const Main = ({Provider}) => {
 		setAlerts([]);
 	}
 
+	const updateTx = (id, _state) => {
+
+		const newTxs = txs.map(tx => {
+			if(id === tx.id) {
+				return { ...tx, state: _state };
+			}
+			return tx;
+		});
+		setTxs(newTxs);
+	}
+
 	useEffect(() => {
 		calculateRent();	
 		resetAlerts();
-	}, [duration, domains, alerts]);
+		if(txTrigger[0]) {
+			const msg = txTrigger[1] === 2 ? "Complete. Your ENS names have been registered." : "Complete";
+			updateTx(txTrigger[1], msg);
+			setTxTrigger(false);
+		}
+	}, [duration, domains, alerts, txs]);
 
 	return (
 	<div className="App-header">
@@ -214,7 +255,7 @@ const Main = ({Provider}) => {
 			</div>
 		</div>
 		) : (
-		<h4> Please connect to a web3 Wallet to use the App</h4>
+		<h4> Please connect to your MetaMask or WalletConnect Wallet.</h4>
 		)}
 		<div id="alertBox">
 		{alerts.map((a,id) => (
@@ -239,18 +280,23 @@ const Main = ({Provider}) => {
 		{ phase === 1 && 
 		<div>
 			<Spinner animation="border" variant="primary" />		
-			<p>Please wait 1 minute for prior to submitting the next transaction...</p>
+			<p>Please wait 1 minute prior to submitting the next transaction...</p>
 		</div>
 		}
 		{ phase === 2 && 
-		<Button onClick={register} variant="primary">Register all domains</Button>
+		<Button onClick={register} variant="primary">Complete Registration</Button>
 		}
+
 		<div id="transactions">
 		{txs.map((tx,id) => (
 			<div key={id}>
-				<p>{tx.msg}<a href={tx.link}>etherscan.io</a></p>
+				<p>Transaction {id+1} is {tx.state}</p>
+				<a href={tx.link}>View on etherscan</a>
 			</div>
 		))}
+		{finalTransaction && 
+			<FinalTransaction/>
+		}
 		</div>
 
 		<div id="register-info">
