@@ -1,3 +1,4 @@
+import logo from './logo.svg';
 import './components.css'; 
 import { ethers } from 'ethers'; import React, { useState, useEffect } from 'react';
 import InputGroup from 'react-bootstrap/InputGroup';
@@ -165,6 +166,7 @@ const Main = ({Provider}) => {
 
 	return (
 	<div className="App-header">
+		<img src={logo} className="App-logo" alt="logo" />
 		<h2>Save Gas registering your domains in bulk</h2>
 		{ Provider !== null ? (
 		<div id="container-input">
