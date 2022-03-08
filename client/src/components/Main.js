@@ -107,13 +107,12 @@ const Main = ({Provider}) => {
 			const perc_gasFee = await contract.perc_gasFee();
 			const _rent = await contract.rentPrice(domains, _duration); 
 			const estimate = await contract.estimateGas.registerAll(domains, addr, _duration, pass, resolver, addr, {value: _rent.add(ethers.utils.parseEther("0.01"))}); 
-			const estimateGas = estimate.add(ethers.BigNumber.from("10000")); 
+			const estimateGas = estimate.add(ethers.BigNumber.from("20000")); 
 			const gasPrice = await provider.getGasPrice();
 
 			// Add corresponding fee
 			if(!isFlatFee){
 				fee = estimateGas.mul(perc_gasFee).div(ethers.BigNumber.from("100")).mul(gasPrice); 
-				console.log(fee);
 			} else {
 				fee = await contract.FEE();
 			}
@@ -122,23 +121,29 @@ const Main = ({Provider}) => {
 			const tx = await contract.registerAll(domains, addr, _duration, pass, resolver, addr, {value: _value, gasLimit: estimateGas}); 
 			setTxs(oldT => [...oldT, {id: 2, state: 'pending... ' ,link: 'https://etherscan.io/tx/' + tx.hash}]);
 			// Wait for confirmation 
-			await tx.wait();
+			const reciept = await tx.wait();
 			// Update tx state
 			setTxTrigger([true, 2]);
 			// Build final Transaction
-			setFinalTransaction(true);
+			setFinalTransaction([true, {fee: fee, gas: reciept.gasUsed, price: gasPrice}]);
 			setPhase(0);
 		} catch(err) {
 			console.log(err);
 		}
 	}
 	
-	const FinalTransaction = () => {
+	const FinalTransaction = ({info}) => {
+		const eth_paid = ethers.utils.formatEther(info.fee);
+		const ens_avg_gas_cost = 270000 * domains.length;
+		const wei_savings = String(ens_avg_gas_cost - Number(String(info.gas)));
+		const eth_gas = ethers.utils.formatEther(info.price.mul(wei_savings));
+		const total_saving = eth_gas - eth_paid;
 		return (
 		<div>
 			<hr/>
 			<p>Please go to <a href={`https://app.ens.domains/address/${Addr}`}>ens</a> to control them</p>
-			<p>or View on OpenSea <a href={`https://opensea.io/assets/${Addr}`}>here</a></p>
+			<p>or View on OpenSea <a href="https://opensea.io/account">here</a></p>
+			<p>You paid {eth_paid} ETH to use our service, and we saved you an estimated {eth_gas} ETH on your gas, saving you a total of {wei_savings} WEI!</p>
 		</div>
 		);
 	}
@@ -295,8 +300,8 @@ const Main = ({Provider}) => {
 				<a href={tx.link}>View on etherscan</a>
 			</div>
 		))}
-		{finalTransaction && 
-			<FinalTransaction/>
+		{finalTransaction[0] && 
+			<FinalTransaction info={finalTransaction[1]}/>
 		}
 		</div>
 
